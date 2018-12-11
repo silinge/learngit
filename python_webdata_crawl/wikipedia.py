@@ -70,3 +70,82 @@
 # getLinks("") #起始页就是网站的主页，
 
 #-------------------------------------------------
+# part five
+
+# from urllib.request import urlopen
+# from bs4 import BeautifulSoup
+# import re
+#
+# pages = set()
+# def getLinks(pageUrl):
+#     global pages
+#     html = urlopen("http://en.wikipedia.org" + pageUrl)
+#     bsObj = BeautifulSoup(html, features='lxml')
+#     try:
+#         print(bsObj.h1.get_text())
+#         print(bsObj.find(id="mw-content-text").findAll("p")[0])
+#         print(bsObj.find(id="ca-edit").find("span").find("a").attrs['href'])
+#     except AttributeError:
+#         print("页面缺少一些属性，不过没有大问题")
+#
+#     for link in bsObj.findAll("a", href = re.compile("^(/wiki/)")):
+#         if 'href' in link.attrs:
+#             if link.attrs['href'] not in pages:
+#                 newPage = link.attrs['href']
+#                 print("deng deng deng deng\n"+newPage)
+#                 pages.add(newPage)
+#                 getLinks(newPage)
+#
+# getLinks("")
+
+#-------------------------------------------------
+# part six
+from urllib.request import urlopen
+from bs4 import BeautifulSoup
+import re
+import datetime
+import random
+
+pages = set()
+random.seed(datetime.datetime.now())
+
+#获取页面内所有链接的列表
+def getInternalLinks(bsObj, includeUrl):
+    internalLinks = []
+    #找出所有“/”开头的链接
+    for link in bsObj.findAll("a", href=re.compile("^(/|.*"+includeUrl+")")):
+        if link.attrs['href'] is not None:
+            if link.attrs['href'] not in internalLinks:
+                internalLinks.append(link.attrs['href'])
+    return internalLinks
+
+# 获取页面所有链接的列表
+def getExternalLinks(bsObj, excludeUrl):
+    externalLinks = []
+    #找出所有“http" 和 ”www" 开头的且不包括当前url的链接
+    for link in bsObj.findAll("a", href = re.compile("^(http|www)((?!"+excludeUrl+").)*$")):
+        if link.attrs['href'] is not None:
+            if link.attrs['href'] not in externalLinks:
+                externalLinks.append(link.attrs['href'])
+    return externalLinks
+
+def splitAddress(address):
+    addressParts = address.replace("http://", "").split("/")
+    return addressParts
+
+def getRandomExternalLink(startingPage):
+    html = urlopen(startingPage)
+    bsObj = BeautifulSoup(html, features='lxml')
+    externalLinks = getExternalLinks(bsObj, splitAddress(startingPage)[0])
+    if len(externalLinks) == 0:
+        internalLinks = getInternalLinks(startingPage)
+        return getNextExternalLink(internalLinks[random.randint(0, len(internalLinks)-1)])
+    else:
+        return externalLinks[random.randint(0, len(externalLinks)-1)]
+
+def followExternalOnly(startingSite):
+    externalLink = getRandomExternalLink("http://oreilly.com")
+    print("随机链接是："+externalLink)
+    followExternalOnly(externalLink)
+
+followExternalOnly("http://oreilly.com")
